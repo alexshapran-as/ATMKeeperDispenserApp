@@ -2,7 +2,6 @@ package services
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.typesafe.config.{Config, ConfigFactory}
-import authenticator.Authenticator._
 import akka.pattern._
 import akka.util.Timeout
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -11,7 +10,7 @@ import scala.concurrent.duration._
 
 object ATMKeeperService {
 
-  private case class Command(cmd: String, signature: String)
+  private case class Command(cmd: String)
   private case class Init(remote: ActorRef)
 
   def remotingConfig(port: Int): Config = ConfigFactory.parseString(
@@ -27,7 +26,7 @@ object ATMKeeperService {
             }
           }
         }
-    """) // "192.168.0.161"
+    """) // "10.50.1.61" BMSTU
 
   def remotingSystem(name: String, port: Int): ActorSystem = ActorSystem(name, remotingConfig(port))
 
@@ -36,22 +35,16 @@ object ATMKeeperService {
     var remoteActorBBB: ActorRef = _
 
     override def receive: Receive = {
-
       case Init(remote) =>
         remoteActorBBB = remote
         println(remoteActorBBB)
 
-      case msg: String => println(msg)
-
-      case command: Command =>
+      case command: String if command == "Command(Test)" =>
         val realBeagleBoneSender: ActorRef = sender
-        println(s"Dispenser Recieved COMMAND: ${command.cmd}")
-        checkSignatures(command.signature, command.cmd) match {
-          case Right(msg) =>
-            realBeagleBoneSender ! Right(msg)
-          case Left(errMsg) =>
-            realBeagleBoneSender ! Left(errMsg)
-        }
+        println(s"Dispenser Recieved COMMAND: ${command}")
+        realBeagleBoneSender ! Right(s"DISPENSER: * Received command: $command")
+
+      case msg: String => println(msg)
     }
 
   }
