@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 object ATMKeeperService {
 
   private case class Command(cmd: String)
-  private case class Init(remote: ActorRef)
+  private case class InitBBBForDispenser(remote: ActorRef)
 
   def remotingConfig(port: Int): Config = ConfigFactory.parseString(
     s"""
@@ -32,17 +32,43 @@ object ATMKeeperService {
 
   class DispenserService extends Actor {
 
-    var remoteActorBBB: ActorRef = _
+    var remoteActorBBB: ActorRef = null
+    var dispenserBlocked = false
 
     override def receive: Receive = {
-      case Init(remote) =>
+      case InitBBBForDispenser(remote) =>
         remoteActorBBB = remote
+        remoteActorBBB ! s"Connection established with ${self.path}"
         println(remoteActorBBB)
 
-      case command: String if command == "Command(Test)" =>
+      case command: String if command == "Command(Снять блокировку диспенсера)" =>
+        val realBeagleBoneSender: ActorRef = sender
+        dispenserBlocked = false
+        realBeagleBoneSender ! Right(s"ДИСПЕНСЕР: блокировка снята")
+
+      case command: String if dispenserBlocked =>
+        val realBeagleBoneSender: ActorRef = sender
+        realBeagleBoneSender ! Right(s"ДИСПЕНСЕР: заблокирован")
+
+      case command: String if command == "Command(Заблокировать диспенсер)" =>
+        val realBeagleBoneSender: ActorRef = sender
+        dispenserBlocked = true
+        realBeagleBoneSender ! Right(s"ДИСПЕНСЕР: заблокирован")
+
+      case command: String if (command == "Command(Сообщить состояние устройств)" ||
+                               command == "Command(Сообщить состояние диспенсера)") =>
         val realBeagleBoneSender: ActorRef = sender
         println(s"Dispenser Recieved COMMAND: ${command}")
-        realBeagleBoneSender ! Right(s"DISPENSER: * Received command: $command")
+        realBeagleBoneSender ! Right(s"ДИСПЕНСЕР: состояние стабильно")
+
+      case command: String if command == "Command(Инкассация банкомата)" ||
+                              command == "Command(Тест контроллера ББ)" ||
+                              command == "Command(Тест датчиков КББ)" ||
+                              command == "Command(Тест Д)" ||
+                              command == "Command(Отключить КББ)" =>
+        val realBeagleBoneSender: ActorRef = sender
+        println(s"Dispenser Recieved COMMAND: ${command}")
+        realBeagleBoneSender ! Right(s"ДИСПЕНСЕР: получена команда $command")
 
       case msg: String => println(msg)
     }
