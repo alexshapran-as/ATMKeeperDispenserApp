@@ -21,7 +21,7 @@ object ATMKeeperService {
           remote {
             enabled-transports = ["akka.remote.netty.tcp"]
             netty.tcp {
-              hostname = "localhost"
+              hostname = "192.168.43.91"
               port = $port
             }
           }
